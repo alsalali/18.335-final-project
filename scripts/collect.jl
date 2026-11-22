@@ -13,6 +13,12 @@
 # where scale_state = max(1, max_s |x_ref|). Controls are never compared (bang-bang problems).
 # The reference uncertainty is the same metric between the two reference resolutions; errors
 # below 10x that are flagged below_ref_floor = 1.
+#
+# If the reference stage has no converged run for a problem (marine ran out of memory, glider hit
+# the wall-time cap and robot hung in the full screen), the reference comes from the sweep itself:
+# among consecutive pairs (N, 2N) of one exact-config CPU ladder that both converged, the pair that
+# agrees best. The finer run is the reference and the pair's difference is the floor, which
+# overestimates the finer run's own error when the ladder converges. ref_key names the run used.
 
 include(joinpath(@__DIR__, "..", "src", "Screen.jl"))
 using .Screen
@@ -77,23 +83,54 @@ function errors(obj, p, tf, X, ref)
     )
 end
 
+"Reference data of a finished run (states sampled from its solution file), or nothing."
+function pack(r, root, spec)
+    sol = read_solution(joinpath(root, "solutions", r["key"] * ".csv"))
+    sol === nothing && return nothing
+    return (; key=r["key"], obj=num(r, "objective"), p=parse_floats(r["p_hat"]), tf=num(r, "tf"),
+            free_tf=spec.tf === nothing, X=sol.X)
+end
+
+const NO_FLOOR = (err_obj=NaN, err_p=NaN, err_tf=NaN, err_x_mesh=NaN, err_x_unif=NaN)
+
 function load_reference(refrows, refroot, problem)
+    spec = COPS_PROBLEMS[Symbol(problem)]
     rs = sort([r for r in values(refrows) if r["problem"] == problem && converged(r)]; by=r -> parse(Int, r["N"]))
     isempty(rs) && return nothing
-    function pack(r)
-        sol = read_solution(joinpath(refroot, "solutions", r["key"] * ".csv"))
-        spec = COPS_PROBLEMS[Symbol(problem)]
-        return (; key=r["key"], obj=num(r, "objective"), p=parse_floats(r["p_hat"]), tf=num(r, "tf"),
-                free_tf=spec.tf === nothing, X=sol.X)
-    end
-    fine = pack(rs[end])
-    floor = if length(rs) >= 2
-        coarse = pack(rs[end-1])
-        errors(coarse.obj, coarse.p, coarse.tf, coarse.X, fine)
-    else
-        (err_obj=NaN, err_p=NaN, err_tf=NaN, err_x_mesh=NaN, err_x_unif=NaN)
-    end
+    fine = pack(rs[end], refroot, spec)
+    fine === nothing && return nothing
+    coarse = length(rs) >= 2 ? pack(rs[end-1], refroot, spec) : nothing
+    floor = coarse === nothing ? NO_FLOOR : errors(coarse.obj, coarse.p, coarse.tf, coarse.X, fine)
     return (; ref=fine, floor)
+end
+
+"Fallback reference from the sweep's exact-config CPU ladders (see the header)."
+function sweep_reference(rows, sweeproot, problem)
+    spec = COPS_PROBLEMS[Symbol(problem)]
+    ladders = Dict{Tuple{String,String},Vector{Dict{String,String}}}()
+    for r in values(rows)
+        r["problem"] == problem && r["config"] == "exact" && r["device"] == "cpu" && converged(r) || continue
+        push!(get!(ladders, (r["family"], r["K"]), Dict{String,String}[]), r)
+    end
+    packed = Dict{String,Any}()
+    getpack(r) = get!(() -> pack(r, sweeproot, spec), packed, r["key"])
+    best = nothing
+    for rs in values(ladders)
+        sort!(rs; by=r -> parse(Int, r["N"]))
+        for (a, b) in zip(rs[1:end-1], rs[2:end])
+            parse(Int, b["N"]) == 2 * parse(Int, a["N"]) || continue
+            pa, pb = getpack(a), getpack(b)
+            (pa === nothing || pb === nothing) && continue
+            floor = errors(pa.obj, pa.p, pa.tf, pa.X, pb)
+            diffs = filter(isfinite, collect(values(floor)))
+            isempty(diffs) && continue
+            score = (maximum(diffs), -parse(Int, b["N"]))   # best agreement, then the finer pair
+            if best === nothing || score < best.score
+                best = (; score, ref=pb, floor)
+            end
+        end
+    end
+    return best === nothing ? nothing : (; ref=best.ref, floor=best.floor)
 end
 
 const ERR_COLS = ["err_obj", "err_p", "err_tf", "err_x_mesh", "err_x_unif"]
@@ -106,9 +143,16 @@ function main()
     rows = rows_under(sweeproot)
     refrows = rows_under(refroot)
     @info "$(length(rows)) sweep rows, $(length(refrows)) reference rows"
-    refs = Dict(p => load_reference(refrows, refroot, string(p)) for p in PROBLEM_ORDER)
-    for (p, r) in refs
-        r === nothing && @warn "no converged reference for $p: error columns stay empty"
+    refs = Dict{Symbol,Any}(p => load_reference(refrows, refroot, string(p)) for p in PROBLEM_ORDER)
+    for p in PROBLEM_ORDER
+        refs[p] === nothing || continue
+        refs[p] = sweep_reference(rows, sweeproot, string(p))
+        if refs[p] === nothing
+            @warn "no converged reference for $p: error columns stay empty"
+        else
+            @warn @sprintf("no converged reference run for %s: using sweep run %s (floor err_x_mesh %.1e, err_obj %.1e)",
+                           p, refs[p].ref.key, refs[p].floor.err_x_mesh, refs[p].floor.err_obj)
+        end
     end
 
     out_cols = vcat(COLUMNS, ERR_COLS, ["below_ref_floor", "ref_key"])

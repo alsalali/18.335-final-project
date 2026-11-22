@@ -44,6 +44,9 @@ Add `--dry-run` to list a task's groups.
 - The CPU job runs `exact` (augmented KKT, tol 1e-10) for accuracy and `lifted` (condensed KKT + relaxed equalities, tol 1e-8, as in Choi & Shin) for timing.
 - The GPU job runs `lifted` on the GPU with cuDSS, plus K ∈ {2, 4, 8} on the same node's CPU (`cpu_gpunode`).
 - Timing: an untimed warmup per (problem, config, device) gives `t_compile`. `t_first` is the first solve. `t_sgm` is the shifted geometric mean of up to 5 reruns (δ = 0.01 s).
+- References: `--stage reference` solves each problem at two fine resolutions. If neither converges
+  (marine, glider and robot in the full screen), `collect.jl` uses the best-agreeing consecutive pair of
+  the sweep's own `exact` CPU runs instead; `ref_key` in `sweep_<grid>.csv` names the run used.
 - Pruning is always recorded in the CSV:
   - `SKIPPED_COST`: larger N skipped after a wall-time hit, OOM or crash.
   - `SATURATED`: `exact` only, larger N skipped after two consecutive changes below 1e-10.
@@ -53,6 +56,9 @@ Add `--dry-run` to list a task's groups.
 - Time limit: `--signal=B:USR1@300` makes `job_body.sh` call `scontrol requeue`.
 - Every attempt skips keys already present in any shard file and retries the run that was in flight.
 - If Julia dies inside an allocation, the job relaunches it and records the run it died on as `CRASHED`.
+- Hang watchdog: MadNLP checks `--max-wall` only between iterations, and one MUMPS factorization can run
+  for hours (seen in the full screen). If the job log has not changed for `--max-wall` + 15 min, the job
+  kills Julia, which records that run as `CRASHED` and skips the larger N of its ladder.
 - A run interrupted 3 times is recorded as `KILLED`.
 
 ## Validation results (21 Nov 2026)

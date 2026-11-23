@@ -1,12 +1,15 @@
 # Collocation K × N screen on the COPS ODE problems
 
-Background and goals are in `HANDOFF.md`. This file covers how to run the screen.
+See the [project brief](docs/HANDOFF.md) for the goals and background. This file covers how to run the screen.
+
+The collocation code uses the Julia environment in this directory (`Project.toml` and `Manifest.toml`).
+Run the commands below from `collocation/` unless the instructions specify the project root.
 
 ## Layout
 | Path | What |
 |---|---|
-| `collocation_schemes.jl`, `cops_problems.jl` | Collocation coefficients and the 10 COPS problems |
 | `src/Screen.jl` | Module that loads everything below |
+| `src/collocation_schemes.jl`, `src/cops_problems.jl` | Collocation coefficients and the 10 COPS problems |
 | `src/transcription.jl` | `build_collocation_model(spec, scheme, N; backend)` → `(ExaModel, layout)` |
 | `src/solvers.jl` | Solver configs `exact` / `lifted` / `reference`, devices, the timed solve |
 | `src/grid.jl` | Grid tiers, job profiles, sharding |
@@ -15,6 +18,9 @@ Background and goals are in `HANDOFF.md`. This file covers how to run the screen
 | `scripts/validate.jl` | Convergence and COPS checks; `--gpu` adds the GPU vs CPU check |
 | `scripts/collect.jl` | Merges shards and computes errors vs the references → `results/sweep_<grid>.csv`, `results/rates_<grid>.csv` |
 | `cluster/` | `env.sh`, `setup.sh`, `cpu.sbatch`, `gpu.sbatch`, `job_body.sh`, `submit.sh` |
+| `analysis/make_runs.py` | `results/sweep_full.csv` → `analysis/out/runs.csv`, the dataset of the analysis page, plus cross-checks |
+| `docs/HANDOFF.md` | The project brief |
+| `results/`, `cluster/logs/`, `analysis/out/` | Outputs, not tracked |
 
 ## Setup (once)
 ```bash
@@ -27,7 +33,8 @@ The CPU linear solver is MUMPS. MA57 needs libHSL: develop `HSL_jll` into the pr
 then pass `--cpu-solver ma57`.
 
 ## Running
-Submit from the repo root. If you submit from inside another Slurm job, unset the inherited `SLURM_*` variables first.
+Run these from this folder. `sbatch` must be called from here because the log paths are relative to it.
+If you submit from inside another Slurm job, unset the inherited `SLURM_*` variables first.
 ```bash
 sbatch -p mit_quicktest --time=00:15:00 --array=0-1 --no-requeue cluster/cpu.sbatch sweep smoke   # CPU smoke
 sbatch --time=00:30:00 --array=0 cluster/gpu.sbatch sweep smoke                                   # GPU smoke
@@ -37,6 +44,14 @@ source cluster/env.sh && julia --project=. scripts/collect.jl --grid full
 ```
 Locally: `julia --project=. scripts/run_sweep.jl --profile cpu --grid smoke --problems gasoil`.
 Add `--dry-run` to list a task's groups.
+
+Analysis: `python3 analysis/make_runs.py` (standard library only) after `collect.jl`.
+
+## Running from the project root
+- `run_sweep.jl`, `collect.jl` and `make_runs.py` default to `results/` in this folder from any working
+  directory, and `setup.sh` and `submit.sh` `cd` here themselves. From the project root, run
+  `bash collocation/cluster/submit.sh` or `julia --project=collocation collocation/scripts/collect.jl`.
+- `sbatch cluster/*.sbatch` is the one exception: run it from this folder.
 
 ## The screen
 - N = 5·2^j, j = 0…11 (5 to 10240). Every N in the ladder has mesh points at s = 0, 0.2, …, 1.

@@ -1,4 +1,4 @@
-# Collocation transcription of an ODEProblemSpec into an ExaModel (HANDOFF.md items 1-2).
+# Collocation transcription of an ODEProblemSpec into an ExaModel (docs/HANDOFF.md items 1-2).
 #
 # Layout, with n = 1..K+1 indexing scheme.nodes (n = 1 is the interval's left endpoint):
 #   x[s, i, n]   states at every node of every interval

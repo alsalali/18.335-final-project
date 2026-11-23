@@ -12,9 +12,9 @@
 #SBATCH --output=cluster/logs/%x_%A_%a.out
 #
 # GPU job: the lifted config on the GPU, plus the headline subset on this node's CPU for a
-# same-hardware comparison. Submit from the repo root:
+# same-hardware comparison. Submit from the collocation folder (log paths are relative to it):
 #   sbatch cluster/gpu.sbatch sweep full
 #   sbatch --time=00:30:00 --array=0 cluster/gpu.sbatch sweep smoke
 #   sbatch --time=02:00:00 --array=0 cluster/gpu.sbatch sweep pilot
 #   sbatch --gres=gpu:a100:1 cluster/gpu.sbatch sweep full           # another GPU type
-exec bash "${SLURM_SUBMIT_DIR:?submit from the repo root}/cluster/job_body.sh" gpu "$@"
+exec bash "${SLURM_SUBMIT_DIR:?submit from the collocation folder}/cluster/job_body.sh" gpu "$@"

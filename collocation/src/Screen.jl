@@ -13,8 +13,8 @@ using Dates
 using Statistics
 import SparseArrays
 
-include(joinpath(@__DIR__, "..", "collocation_schemes.jl"))
-include(joinpath(@__DIR__, "..", "cops_problems.jl"))
+include(joinpath(@__DIR__, "collocation_schemes.jl"))
+include(joinpath(@__DIR__, "cops_problems.jl"))
 using .CollocationSchemes
 using .COPSProblems
 using .COPSProblems: ODEProblemSpec

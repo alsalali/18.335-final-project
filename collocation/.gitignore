@@ -1,3 +1,4 @@
-# Sweep output and Slurm logs
-results/
-cluster/logs/
+# Paths are relative to this folder, so it can sit anywhere inside a larger repo.
+/results/
+/cluster/logs/
+/analysis/out/

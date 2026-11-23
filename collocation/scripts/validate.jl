@@ -1,4 +1,4 @@
-# Checks before the sweep (HANDOFF.md "Validation order"):
+# Checks before the sweep (docs/HANDOFF.md "Validation order"):
 #   1. gasoil (smooth): mesh-point state error vs h; expect order ~2K (legendre), ~2K-1 (radau).
 #   2. rocket (bang-bang): low order whatever K is.
 #   3. K = 4 Legendre objectives against COPSBenchmark.jl's expected values at the same N.

@@ -10,9 +10,10 @@
 #SBATCH --open-mode=append           # one log across attempts (job ids are stable across requeues)
 #SBATCH --output=cluster/logs/%x_%A_%a.out
 #
-# CPU-only job: the exact (accuracy) and lifted (timing) configs on the CPU. Submit from the repo root:
+# CPU-only job: the exact (accuracy) and lifted (timing) configs on the CPU.
+# Submit from the collocation folder (log paths are relative to it):
 #   sbatch cluster/cpu.sbatch sweep full                              # the screen (32 tasks)
 #   sbatch --array=0-9 -J coll-ref cluster/cpu.sbatch reference full --max-wall 14400   # references, one task per problem
 #   sbatch -p mit_quicktest --time=00:15:00 --array=0-1 --no-requeue cluster/cpu.sbatch sweep smoke
 # Extra arguments go to scripts/run_sweep.jl (e.g. --problems gasoil,rocket).
-exec bash "${SLURM_SUBMIT_DIR:?submit from the repo root}/cluster/job_body.sh" cpu "$@"
+exec bash "${SLURM_SUBMIT_DIR:?submit from the collocation folder}/cluster/job_body.sh" cpu "$@"

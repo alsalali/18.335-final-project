@@ -1,6 +1,6 @@
 # Merge sweep shards, compute errors against the reference solutions, fit convergence orders.
 #
-#   julia --project=. scripts/collect.jl [--grid full] [--results results]
+#   julia --project=. scripts/collect.jl [--grid full] [--results dir]   (defaults to results/ in this folder)
 #
 # Writes results/sweep_<grid>.csv (every run, with error columns) and results/rates_<grid>.csv.
 #
@@ -25,7 +25,7 @@ using .Screen
 using Printf, Statistics, LinearAlgebra
 
 function cli(args)
-    o = Dict("grid" => "full", "results" => "results")
+    o = Dict("grid" => "full", "results" => normpath(joinpath(@__DIR__, "..", "results")))
     for i in 1:2:length(args)
         o[args[i][3:end]] = args[i+1]
     end
@@ -155,7 +155,7 @@ function main()
         end
     end
 
-    out_cols = vcat(COLUMNS, ERR_COLS, ["below_ref_floor", "ref_key"])
+    out_cols = vcat(COLUMNS, ERR_COLS, ["below_ref_floor", "ref_key", "ref_floor_x_mesh", "ref_floor_obj"])
     out = Dict{String,String}[]
     for key in sort(collect(keys(rows)))
         r = copy(rows[key])
@@ -170,6 +170,8 @@ function main()
                 f = ref.floor.err_x_mesh
                 r["below_ref_floor"] = isfinite(f) && e.err_x_mesh < 10f ? "1" : "0"
                 r["ref_key"] = ref.ref.key
+                r["ref_floor_x_mesh"] = repr(f)
+                r["ref_floor_obj"] = repr(ref.floor.err_obj)
             end
         end
         push!(out, r)

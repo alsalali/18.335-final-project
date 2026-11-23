@@ -3,7 +3,7 @@
 #   julia --project=. scripts/run_sweep.jl --profile cpu|gpu --stage sweep|reference \
 #         --grid full|smoke|pilot [--task i --ntasks n --launch k --threads t] \
 #         [--problems gasoil,rocket] [--cpu-solver mumps] [--max-wall 1800] [--max-iter 3000] \
-#         [--results results] [--dry-run]
+#         [--results dir] [--dry-run]          (--results defaults to results/ in this folder)
 #
 # Resumable: finished keys (in any shard file) are skipped, so rerunning the same command
 # after preemption, a time limit or a crash continues where it stopped. Exits 0 when the
@@ -12,7 +12,8 @@
 const ARGS_DEFAULT = Dict(
     "profile" => "cpu", "stage" => "sweep", "grid" => "smoke", "task" => "0", "ntasks" => "1",
     "launch" => "1", "threads" => "1", "problems" => "", "cpu-solver" => "mumps",
-    "max-wall" => "1800", "max-iter" => "3000", "results" => "results", "dry-run" => "false",
+    "max-wall" => "1800", "max-iter" => "3000", "results" => normpath(joinpath(@__DIR__, "..", "results")),
+    "dry-run" => "false",
 )
 
 function parse_cli(args)

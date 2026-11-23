@@ -1,0 +1,3 @@
+# Sweep output and Slurm logs
+results/
+cluster/logs/

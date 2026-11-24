@@ -20,7 +20,8 @@ Run the commands below from `collocation/` unless the instructions specify the p
 | `cluster/` | `env.sh`, `setup.sh`, `cpu.sbatch`, `gpu.sbatch`, `job_body.sh`, `submit.sh` |
 | `analysis/make_runs.py` | `results/sweep_full.csv` → `analysis/out/runs.csv`, the dataset of the analysis page, plus cross-checks |
 | `docs/HANDOFF.md` | The project brief |
-| `results/`, `cluster/logs/`, `analysis/out/` | Outputs, not tracked |
+| `results/` | Full-sweep summary CSVs for MUMPS and MA57, with a [results index](results/README.md) |
+| `cluster/logs/`, `analysis/out/` | Local outputs |
 
 ## Setup (once)
 ```bash

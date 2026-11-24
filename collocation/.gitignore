@@ -1,4 +1,13 @@
-# Paths are relative to this folder, so it can sit anywhere inside a larger repo.
-/results/
+# Keep the results index and the full-sweep summary CSVs in Git.
+/results/*
+!/results/README.md
+!/results/sweep_full.csv
+!/results/rates_full.csv
+!/results/ma57/
+/results/ma57/*
+!/results/ma57/sweep_full.csv
+!/results/ma57/rates_full.csv
 /cluster/logs/
 /analysis/out/
+# Each user downloads the licensed libHSL package separately.
+/HSL_jll*
